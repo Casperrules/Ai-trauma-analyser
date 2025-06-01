@@ -44,6 +44,7 @@ export default function Home() {
       alert(
         "Even we cant determine the kind of damage that has been caused. Please try again later."
       );
+      console.log("Error during analysis:", error);
     } finally {
       setLoading(false);
       setLoadingMessage("");
@@ -66,6 +67,7 @@ export default function Home() {
       setShowPopup(true);
     } catch (error) {
       alert("An error occurred while giving therapy. Please try again later.");
+      console.log("Error during therapy:", error);
     } finally {
       setLoading(false);
       setLoadingMessage("");
