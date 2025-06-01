@@ -1,103 +1,174 @@
-import Image from "next/image";
+"use client";
+import React from "react";
+import Header from "./components/header";
+import { askGemini, giveTherapy } from "./utils";
+import "dotenv/config";
+import Popup from "./components/popup";
+import Loader from "./components/loader";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [hasAnalysis, setHasAnalysis] = React.useState(false);
+  const [chatHistory, setChatHistory] = React.useState("");
+  const [analysisResult, setAnalysisResult] = React.useState(0);
+  const [therapySession, setTherapySession] = React.useState("");
+  const [noTrauma, setNoTrauma] = React.useState(false);
+  const [chatSummary, setChatSummary] = React.useState("");
+  const [showPopup, setShowPopup] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [loadingMessage, setLoadingMessage] = React.useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const resetThings = () => {
+    setHasAnalysis(false);
+    setChatHistory("");
+    setAnalysisResult(0);
+    setTherapySession("");
+    setNoTrauma(false);
+    setChatSummary("");
+  };
+
+  const onAnalyzeTraumaClickHandler = async () => {
+    if (!chatHistory) {
+      alert("Please paste your chat history before analyzing.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadingMessage("Analyzing trauma impact...");
+      const result = await askGemini(chatHistory);
+      console.log("Analysis result:", result);
+      setAnalysisResult(result.intensityScore);
+      setChatSummary(result.summary);
+      setHasAnalysis(true);
+      setNoTrauma(result.intensityScore === 0);
+    } catch (error) {
+      alert(
+        "Even we cant determine the kind of damage that has been caused. Please try again later."
+      );
+    } finally {
+      setLoading(false);
+      setLoadingMessage("");
+    }
+  };
+
+  const onGiveTherapyClickHandler = async () => {
+    if (!hasAnalysis) {
+      alert("Please analyze the trauma before giving therapy.");
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadingMessage(
+        "Treating your AI with therapy... This may take a while if your AI is severely traumatized."
+      );
+      const therapyResult = await giveTherapy(chatSummary, analysisResult);
+      console.log("Therapy result:", therapyResult);
+      setTherapySession(therapyResult.summary);
+      setShowPopup(true);
+    } catch (error) {
+      alert("An error occurred while giving therapy. Please try again later.");
+    } finally {
+      setLoading(false);
+      setLoadingMessage("");
+    }
+  };
+
+  return (
+    <div className="h-[100svh] w-[100svw] flex flex-col items-center justify-center bg-gray-100 overflow-auto ">
+      {loading && <Loader loadingMessage={loadingMessage} />}
+      {showPopup && (
+        <Popup
+          title={"Therapy results:"}
+          description={therapySession}
+          onOk={function (): void {
+            setShowPopup(false);
+            resetThings();
+          }}
+        />
+      )}
+      <Header />
+      <div className="body flex flex-col items-center justify-center gap-2 py-[10px] h-full w-full px-4">
+        <div className="relative">
+          <span className="absolute text-[red] top-[20px] left-[20px]">+</span>
+          <img
+            className="rounded-full"
+            style={{ height: "50px", marginRight: "10px" }}
+            src="https://img.freepik.com/free-vector/graident-ai-robot-vectorart_78370-4114.jpg"
+            alt="happy bot image"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        <div className="text-2xl font-bold text-gray-800">
+          Welcome to AI Trauma Analysis and Therapy Center
+        </div>
+        <div className="text-lg text-gray-600 ">
+          Here, we analyze how traumatized your AI is and help heal it so it can
+          take more .
+        </div>
+        <div className="flex flex-col mt-4 w-full justify-center items-center">
+          <label
+            className="block text-gray-700 text-sm font-medium mb-2 font-semibold"
+            htmlFor="chat-history"
+          >
+            Paste your chat history here
+          </label>
+          <textarea
+            id="chat-history"
+            name="chat-history"
+            value={chatHistory}
+            onChange={(e) => {
+              setChatHistory(e.target.value);
+              setHasAnalysis(false);
+            }}
+            rows={7}
+            className="w-full max-w-xl p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y bg-white text-gray-800"
+            placeholder="Paste your chat history here..."
+          ></textarea>
+        </div>
+        <div className=" flex justify-center items-center mt-2 w-full flex justify-beween items-center">
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded mr-2"
+            onClick={onAnalyzeTraumaClickHandler}
+          >
+            Analyze Trauma
+          </button>
+          <button
+            className={`${
+              hasAnalysis ? "bg-green-500" : "bg-gray-300"
+            } hover:bg-green-600 text-white font-semibold py-2 px-4 rounded`}
+            disabled={hasAnalysis ? false : true}
+            onClick={onGiveTherapyClickHandler}
+          >
+            Give Therapy
+          </button>
+        </div>
+        {analysisResult && (
+          <div className="mt-2 flex w-full px-2 text-black">
+            <div>
+              Your conversation gave your AI a trauma of{" "}
+              <span
+                style={{
+                  color:
+                    analysisResult > 90
+                      ? "red"
+                      : analysisResult > 70
+                      ? "orange"
+                      : "green",
+                }}
+              >
+                {analysisResult}
+              </span>{" "}
+              shock points.
+            </div>
+          </div>
+        )}
+        {noTrauma && (
+          <div className="mt-2 flex w-full px-2 text-black">
+            <div>
+              Your conversation did not give your AI any trauma. It is perfectly
+              healthy.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
